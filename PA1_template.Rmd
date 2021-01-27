@@ -1,25 +1,118 @@
 ---
 title: "Reproducible Research: Peer Assessment 1"
 output: 
-  html_document:
-    keep_md: true
+  html_document
 ---
 
 
 ## Loading and preprocessing the data
 
+The first step is to download the file and load the data into R.
+First, prepare the dataframe by group (date) and then compute the summation of steps per date.
 
+```{r getting, echo=TRUE}
+library(knitr)
+library(ggplot2)
+library(tidyverse)
+library(lubridate)
+
+data <- read.csv('activity.csv')
+data$date <- ymd(data$date)
+```
 
 ## What is mean total number of steps taken per day?
+The histogram will display the distribution of the total steps per day.
+The blue line displays the mean and the green dashed line for the median. 
 
+```{r analysis1, echo=TRUE}
+#In this analysis, all the NAs under the step variable were considered in the succeeding computations.
+steps_per_day <- with(data, aggregate(steps, by = list(date), sum, na.rm = TRUE))
+names(steps_per_day) <- c("date", "steps")
 
+hist(steps_per_day$steps, main = "Histogram of the total steps taken per day", 
+     xlab = "Total Steps per Day",
+     ylab = "Frequency (days)",
+     col = "gray")
+rug(steps_per_day$steps)
+abline(v=mean(steps_per_day$steps),lwd=2,col="blue")
+abline(v=median(steps_per_day$steps),lwd=2,lty=2,col="green")
+
+#The mean and median are calculated and reported below.
+mean(steps_per_day$steps)
+median(steps_per_day$steps)
+```
 
 ## What is the average daily activity pattern?
+A dataframe of the mean steps per interval is created and the NAs are discarded.
+The time-series plot is created to show the average steps per 5-minute interval.
+```{r analysis2, echo=TRUE}
+mean_steps_interval <- aggregate(steps ~ interval, data, mean, na.rm = TRUE)
+#A time-series plot is generated using the dataframe.
+plot(mean_steps_interval$interval, mean_steps_interval$steps, 
+     type = "l", 
+     main = "Average number of steps per 5-min interval", 
+     xlab = "5-minute Interval", 
+     ylab = "Average Steps",
+     col="blue")
 
+#The maximum number of average steps in the 5-minute interval is located in the interval below:
+mean_steps_interval$interval[which.max(mean_steps_interval$steps)]
 
+```
 
 ## Imputing missing values
+The series of codes below imputes NAs with the average steps per 5-minute interval.
+The dataset with imputed NAs compared to the original dataset vary as shown in the histogram below.
+The mean and median of the imputed data is higher.
+```{r imputing, echo=TRUE}
+#The code blow calculates the total number of missing values in the dataset.
+sum(is.na(data$steps))
+#This matches the mean of daily steps with the NAs.
+imputed_steps <- mean_steps_interval$steps[match(data$interval, mean_steps_interval$interval)]
+#Transforming steps in data if they were missing values with the filled values from above.
+data_imputed <- transform(data, steps = ifelse(is.na(data$steps), yes = imputed_steps, no = data$steps))
+# Forming the new dataset with the imputed missing values to create the mean steps per day.
+total_data_imputed <- aggregate(steps ~ date, data_imputed, sum)
+#The mean and median fo the imputed data are calculated and reported below.
+mean(total_data_imputed$steps)
+median(total_data_imputed$steps)
 
+#The plot below shows the impact of imputed NAs on the original data.
+#The blue line displays the mean and the green dashed line for the median. 
 
+par(mfrow = c(1,2))
+hist(steps_per_day$steps, main = "Histogram of the total steps taken per day", 
+     xlab = "Total Steps per Day",
+     ylab = "Frequency (days)",
+     col = "gray")
+rug(steps_per_day$steps)
+abline(v=mean(steps_per_day$steps),lwd=2,col="blue")
+abline(v=median(steps_per_day$steps),lwd=2,lty=2,col="green")
+
+hist(total_data_imputed$steps, main = "Histogram of the total steps taken per day", 
+     xlab = "Total Steps per Day",
+     ylab = "Frequency (days)",
+     col = "gray")
+rug(total_data_imputed$steps)
+abline(v=mean(total_data_imputed$steps),lwd=2,col="blue")
+abline(v=median(total_data_imputed$steps),lwd=2,lty=2,col="green")
+```
 
 ## Are there differences in activity patterns between weekdays and weekends?
+A new factor variable is created to indicate whether the date is weekday or weekend.
+A comparative analysis of time-series plot is generated to show the average steps per 5-minute interval for weekday and weekend.
+
+```{r analysis3, echo=TRUE}
+day <- ifelse(weekdays(data_imputed$date) %in% c("Saturday", "Sunday"), "weekend", "weekday")
+data_imputed$day <- as.factor(day)
+#A panel plot is created containing a time series plot of the 5-minute interval and the average number of steps taken, averaged across all weekday days or weekend days.
+mean_steps_interval_day <- aggregate(steps ~ day + interval, data_imputed, mean)
+
+mean_steps_interval_day %>% 
+  ggplot(aes(interval, steps)) +
+  facet_grid(day ~ .) + 
+  geom_line() + 
+  xlab("5-minute Interval")+
+  ylab("Average Steps") +
+  ggtitle("Average number of steps per 5-min interval by weekday vs weekend")
+```
