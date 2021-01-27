@@ -1,9 +1,13 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document
+title: "RepData_Project1"
+author: "Marnel R"
+date: "1/27/2021"
+output: html_document
 ---
 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
 
 ## Loading and preprocessing the data
 
@@ -41,6 +45,7 @@ abline(v=median(steps_per_day$steps),lwd=2,lty=2,col="green")
 mean(steps_per_day$steps)
 median(steps_per_day$steps)
 ```
+
 
 ## What is the average daily activity pattern?
 A dataframe of the mean steps per interval is created and the NAs are discarded.
@@ -116,3 +121,4 @@ mean_steps_interval_day %>%
   ylab("Average Steps") +
   ggtitle("Average number of steps per 5-min interval by weekday vs weekend")
 ```
+
